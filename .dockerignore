@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+.git/
+.gitignore
+uv.lock
+*.egg-info/
+tests/
+README.md

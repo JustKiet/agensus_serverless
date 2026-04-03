@@ -1,0 +1,16 @@
+[project]
+name = "load"
+version = "0.1.0"
+description = "Load lambda: vectorizes chunks, stores in Qdrant, generates summary"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "aws-lambda-powertools>=3.26.0",
+    "aws-lambda-typing>=2.20.0",
+    "compakt",
+    "shared",
+]
+
+[tool.uv.sources]
+compakt = { git = "https://github.com/JustKiet/compakt.git" }
+shared = { workspace = true }

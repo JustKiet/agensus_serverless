@@ -1,0 +1,43 @@
+# syntax=docker/dockerfile:1
+# Base image for the extract worker.
+# Build once: bash infrastructure/deploy-lambdas.sh --build-base
+# Rebuild only when deps change (apt packages, pip deps, or HF models).
+
+FROM python:3.13-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libmagic1 \
+    libxcb1 \
+    libgl1 \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/
+
+# Install heavy deps (docling pulls in torch, ~2GB of packages).
+# type=cache persists in Docker's build cache — no host transfer, fast on rebuilds.
+RUN --mount=type=cache,id=agensus-extract-uv,target=/root/.cache/uv \
+    UV_LINK_MODE=copy uv pip install --system \
+    "boto3>=1.42.76" \
+    "docling>=2.82.0" \
+    "python-magic>=0.4.27"
+
+# Bake in only the docling-specific HF models (~1GB).
+# Passed via --build-context hf-cache=~/.cache/huggingface/hub
+ENV HF_HOME=/root/.cache/huggingface
+COPY --from=hf-cache \
+    models--ds4sd--docling-models \
+    /root/.cache/huggingface/hub/models--ds4sd--docling-models/
+COPY --from=hf-cache \
+    models--ds4sd--docling-layout-heron \
+    /root/.cache/huggingface/hub/models--ds4sd--docling-layout-heron/
+COPY --from=hf-cache \
+    models--docling-project--docling-models \
+    /root/.cache/huggingface/hub/models--docling-project--docling-models/
+COPY --from=hf-cache \
+    models--docling-project--docling-layout-heron \
+    /root/.cache/huggingface/hub/models--docling-project--docling-layout-heron/
+
+ENV TRANSFORMERS_OFFLINE=1
+ENV HF_DATASETS_OFFLINE=1
+ENV HF_HUB_OFFLINE=1

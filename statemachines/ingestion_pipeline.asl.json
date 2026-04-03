@@ -1,0 +1,81 @@
+{
+  "Comment": "Agensus Document Ingestion Pipeline: Extract (EC2 worker) -> Transform -> Load",
+  "StartAt": "Extract",
+  "States": {
+    "Extract": {
+      "Type": "Task",
+      "Comment": "EC2 Activity Task: the extract worker polls GetActivityTask, runs docling, calls SendTaskSuccess",
+      "Resource": "${ExtractActivityArn}",
+      "ResultPath": "$.extractResult",
+      "HeartbeatSeconds": 3600,
+      "Retry": [
+        {
+          "ErrorEquals": ["States.HeartbeatTimeout"],
+          "IntervalSeconds": 10,
+          "MaxAttempts": 1,
+          "BackoffRate": 1.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleError",
+          "ResultPath": "$.error"
+        }
+      ],
+      "Next": "Transform"
+    },
+    "Transform": {
+      "Type": "Task",
+      "Resource": "${TransformFunctionArn}",
+      "InputPath": "$.extractResult",
+      "ResultPath": "$.transformResult",
+      "Retry": [
+        {
+          "ErrorEquals": ["States.TaskFailed"],
+          "IntervalSeconds": 5,
+          "MaxAttempts": 2,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleError",
+          "ResultPath": "$.error"
+        }
+      ],
+      "Next": "Load"
+    },
+    "Load": {
+      "Type": "Task",
+      "Resource": "${LoadFunctionArn}",
+      "InputPath": "$.transformResult",
+      "ResultPath": "$.loadResult",
+      "Retry": [
+        {
+          "ErrorEquals": ["States.TaskFailed"],
+          "IntervalSeconds": 10,
+          "MaxAttempts": 2,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleError",
+          "ResultPath": "$.error"
+        }
+      ],
+      "Next": "Success"
+    },
+    "Success": {
+      "Type": "Succeed"
+    },
+    "HandleError": {
+      "Type": "Fail",
+      "Error": "IngestionPipelineError",
+      "Cause": "An error occurred during the ingestion pipeline. Check CloudWatch logs for details."
+    }
+  }
+}
