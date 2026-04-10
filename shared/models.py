@@ -9,6 +9,7 @@ class ChunkItem(BaseModel):
     id: str | None = None
     text: str
     document_id: str
+    user_id: str
     chunk_index: int
     metadata: dict[str, Any]
 
@@ -33,6 +34,8 @@ class TransformResult(BaseModel):
     blob_name: str
     job_id: str
     summary_blob_name: str
+    document_id: str
+    user_id: str
     chunks: list[ChunkItem]
 
 

@@ -3,6 +3,7 @@
 import logging
 import uuid
 from datetime import datetime, timezone
+from typing import Any
 
 import boto3
 from aws_lambda_typing import context
@@ -38,7 +39,7 @@ def _ensure_qdrant_collection(vector_size: int) -> None:
         logger.info("Created Qdrant collection: %s", settings.QDRANT_COLLECTION)
 
 
-def main(event: dict, context: context.Context) -> dict:
+def main(event: dict[str, Any], context: context.Context) -> dict[str, Any]:
     """
     Load lambda invoked by Step Functions after Transform.
 
@@ -52,6 +53,7 @@ def main(event: dict, context: context.Context) -> dict:
     job_id = event["job_id"]
     summary_blob_name = event["summary_blob_name"]
     document_id = event["document_id"]
+    user_id = event["user_id"]
     chunks = event["chunks"]
 
     # --- Vectorize ---
@@ -73,6 +75,7 @@ def main(event: dict, context: context.Context) -> dict:
             vector=vectors[i],
             payload={
                 "document_id": document_id,
+                "user_id": user_id,
                 "chunk_index": chunks[i].get("chunk_index", i),
                 "text": chunks[i]["text"],
                 "metadata": chunks[i].get("metadata", {}),

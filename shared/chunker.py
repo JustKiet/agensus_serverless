@@ -19,11 +19,12 @@ class MarkdownChunker:
         self.headers_to_split_on = headers_to_split_on or _headers_to_split_on
         self.splitter = MarkdownHeaderTextSplitter(self.headers_to_split_on)
 
-    def chunk(self, text: str, document_id: str) -> list[ChunkItem]:
+    def chunk(self, text: str, document_id: str, user_id: str) -> list[ChunkItem]:
         documents = self.splitter.split_text(text)
         return [
             ChunkItem(
                 document_id=document_id,
+                user_id=user_id,
                 text=doc.page_content,
                 chunk_index=idx,
                 metadata=doc.metadata,

@@ -12,7 +12,9 @@ Environment variables (from shared.config + worker-specific):
 import json
 import logging
 import os
+import signal
 import tempfile
+import threading
 from typing import Any
 
 import boto3
@@ -47,6 +49,19 @@ sfn_client = boto3.client(
 logger.info("Loading Docling models (this runs once at startup)...")
 document_converter = DocumentConverter()
 logger.info("Docling models ready.")
+
+# ---------------------------------------------------------------------------
+# Graceful shutdown — set flag on SIGTERM so the polling loop exits cleanly
+# ---------------------------------------------------------------------------
+_shutdown = threading.Event()
+
+
+def _handle_sigterm(signum: int, frame: Any) -> None:
+    logger.info("SIGTERM received — finishing current task then exiting.")
+    _shutdown.set()
+
+
+signal.signal(signal.SIGTERM, _handle_sigterm)
 
 SFN_ACTIVITY_ARN: str = os.environ["SFN_ACTIVITY_ARN"]
 PAGE_BREAK_PLACEHOLDER = "<---PAGE_BREAK--->"
@@ -148,7 +163,7 @@ def _process_task(task_token: str, event: dict[str, Any]) -> None:
 # ---------------------------------------------------------------------------
 def run() -> None:
     logger.info("Extract worker started, polling activity: %s", SFN_ACTIVITY_ARN)
-    while True:
+    while not _shutdown.is_set():
         try:
             resp = sfn_client.get_activity_task(
                 activityArn=SFN_ACTIVITY_ARN,

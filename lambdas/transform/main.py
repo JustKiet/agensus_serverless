@@ -47,7 +47,7 @@ def main(event: dict[str, Any], context: context.Context) -> dict[str, Any]:
     )
 
     # Chunk the extracted text
-    chunks = chunker.chunk(extracted_text, document_id)
+    chunks = chunker.chunk(extracted_text, document_id, user_id)
     logger.info(f"Chunked into {len(chunks)} chunks for document_id={document_id}")
 
     # Update ingestion status
@@ -72,5 +72,6 @@ def main(event: dict[str, Any], context: context.Context) -> dict[str, Any]:
         "job_id": job_id,
         "summary_blob_name": summary_blob_name,
         "document_id": document_id,
+        "user_id": user_id,
         "chunks": [chunk.model_dump() for chunk in chunks],
     }
